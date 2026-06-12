@@ -1,0 +1,45 @@
+/* ============================================================
+   THEME · COMPOUND — deep-teal authority, gold CTAs (Compound Systems brand)
+   Set <html data-theme="compound">. Load after deck-kit.css.
+============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+[data-theme="compound"] {
+    --bg: #0C1C1C; --bg-sec: #0F2424; --surface: #122E2E;
+    --text: #F4F2ED; --text-soft: #9DB3B0; --hair: rgba(90,224,200,.16);
+    --accent: #5AE0C8; --pill-bg: rgba(90,224,200,.12);
+    --cta-bg: #E8CB5A; --cta-text: #0C1C1C;
+    --font-display: 'Archivo Black', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    /* engine chrome */
+    --dk-accent: #1F6B63; --dk-accent-2: #E8CB5A; --dk-accent-bright: #5AE0C8;
+}
+
+[data-theme="compound"] .slide { background: var(--bg); color: var(--text); font-family: var(--font-body); }
+[data-theme="compound"] .slide.sec { background: linear-gradient(135deg, #0F2424, #0C1C1C 60%); }
+
+[data-theme="compound"] .top { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.5rem,4vh,2.5rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="compound"] .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(2rem,6vw,5.5rem); width: 100%; max-width: 1180px; box-sizing: border-box; }
+[data-theme="compound"] .bot { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.1rem,3vh,1.9rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="compound"] .brand, [data-theme="compound"] .meta, [data-theme="compound"] .pg, [data-theme="compound"] .brand-mark { font-family: var(--font-mono); font-size: clamp(.68rem,.95vw,.85rem); letter-spacing: .06em; color: var(--text-soft); text-transform: uppercase; }
+
+[data-theme="compound"] .overline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .18em; font-size: clamp(.68rem,1vw,.9rem); color: var(--accent); margin: 0 0 clamp(.7rem,1.6vh,1.1rem); }
+[data-theme="compound"] .display { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.6rem,7vw,5.6rem); line-height: .98; letter-spacing: -.02em; margin: 0; }
+[data-theme="compound"] .section { font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem,5vw,3.8rem); line-height: 1.02; letter-spacing: -.02em; margin: 0; }
+[data-theme="compound"] .lead { font-size: clamp(1.05rem,1.7vw,1.55rem); line-height: 1.5; color: var(--text-soft); max-width: 42ch; margin: clamp(1rem,2.4vh,1.6rem) 0 0; }
+[data-theme="compound"] p { font-size: clamp(1rem,1.3vw,1.28rem); line-height: 1.6; margin: .6rem 0 0; }
+[data-theme="compound"] .rule { width: 48px; height: 2px; background: var(--cta-bg); margin: clamp(1rem,2.5vh,1.6rem) 0; }
+
+[data-theme="compound"] .stat-number { font-family: var(--font-display); font-weight: 400; font-size: clamp(3.4rem,11vw,9rem); line-height: .88; letter-spacing: -.03em; color: var(--accent); font-variant-numeric: tabular-nums; }
+[data-theme="compound"] .stat-label { font-size: clamp(1rem,1.5vw,1.4rem); font-weight: 600; margin-top: .6rem; }
+[data-theme="compound"] .stat-sub { color: var(--text-soft); font-family: var(--font-mono); font-size: clamp(.78rem,1.1vw,1rem); margin-top: .4rem; }
+
+[data-theme="compound"] .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: clamp(1rem,2vw,1.6rem); margin-top: clamp(1.4rem,3vh,2.2rem); }
+[data-theme="compound"] .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: clamp(1.1rem,2vw,1.7rem); }
+[data-theme="compound"] .card-t { font-weight: 600; font-size: clamp(1.05rem,1.4vw,1.4rem); }
+[data-theme="compound"] .card-d { color: var(--text-soft); font-size: clamp(.9rem,1.1vw,1.1rem); margin-top: .4rem; line-height: 1.5; }
+
+[data-theme="compound"] .pill { display: inline-flex; align-items: center; gap: .4em; background: var(--pill-bg); color: var(--accent); border: 1px solid var(--hair); border-radius: 999px; padding: .35em .9em; font-size: clamp(.76rem,1vw,.95rem); font-family: var(--font-mono); }
+[data-theme="compound"] .kbd { font-family: var(--font-mono); background: var(--surface); border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 7px; padding: .12em .5em; font-size: .92em; color: var(--accent); }
+[data-theme="compound"] .cta { display: inline-flex; align-items: center; gap: .5em; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font-body); font-weight: 600; padding: clamp(.7rem,1.5vh,1rem) clamp(1.3rem,2.5vw,1.9rem); border-radius: 10px; text-decoration: none; font-size: clamp(1rem,1.3vw,1.2rem); }

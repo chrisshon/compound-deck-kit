@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="compound">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="deck-id" content="compound-deck-kit-showcase-v1">
+  <title>Compound Deck Kit · Showcase</title>
+
+  <style>
+/* ============================================================
+   COMPOUND DECK KIT — engine CSS (full-page behavior + author chrome)
+   Pair with deck-kit.js. Load order in <head>:
+       <link rel="stylesheet" href="assets/deck-kit.css">
+       <link rel="stylesheet" href="themes/<theme>.css">   (theme wins)
+       <script defer src="assets/deck-kit.js"></script>
+   Requirement: each slide is <section class="slide"> … </section>.
+   Optional:    <script type="application/json" id="speaker-notes">[…]</script>
+
+   Everything here is generic. Themes set colors/fonts/layout and may
+   override the --dk-* chrome variables below to match the deck.
+   by Compound Systems · usecompound.ai
+============================================================ */
+
+:root {
+    /* chrome accents — themes override these to match the deck */
+    --dk-accent:        #1f6b63;   /* active nav dot, reveal-gate, edit focus */
+    --dk-accent-2:      #c9ae3c;   /* progress bar, marker pins */
+    --dk-accent-bright: #5ae0c8;   /* active nav dot on dark slides */
+    --dk-ease:          cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- full-page scroll-snap base ---- */
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; }
+
+.slide {
+    position: relative;
+    width: 100vw; height: 100vh; height: 100dvh;
+    scroll-snap-align: start; overflow: hidden;
+    display: flex; flex-direction: column;
+}
+
+/* ---- reveal animation (ease-out-expo) ---- */
+.reveal {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.8s var(--dk-ease), transform 0.8s var(--dk-ease);
+}
+.slide.visible .reveal { opacity: 1; transform: none; }
+.reveal.d1{transition-delay:.05s}.reveal.d2{transition-delay:.12s}.reveal.d3{transition-delay:.20s}
+.reveal.d4{transition-delay:.28s}.reveal.d5{transition-delay:.36s}.reveal.d6{transition-delay:.44s}
+.reveal.d7{transition-delay:.52s}.reveal.d8{transition-delay:.60s}
+
+/* ---- tap-to-reveal gate (optional, opt-in) ----
+   Wrap hidden content in [data-gate]; put a <button class="reveal-gate">
+   inside it. Click (or Enter/Space on that slide) reveals .gate-item kids. */
+[data-gate] .gate-item {
+    opacity: 0; transform: translateY(16px);
+    transition: opacity .7s var(--dk-ease), transform .7s var(--dk-ease);
+}
+[data-gate].revealed .gate-item { opacity: 1; transform: none; }
+[data-gate].revealed .reveal-gate { opacity: 0; pointer-events: none; transform: scale(1.03); }
+.reveal-gate {
+    cursor: pointer; transition: opacity .5s var(--dk-ease), transform .5s var(--dk-ease);
+}
+
+/* ---- progress + nav dots (auto-injected) ---- */
+.deck-progress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--dk-accent-2); z-index: 9999; transition: width .3s cubic-bezier(.2,.7,.2,1); }
+.nav-dots { position: fixed; right: clamp(10px,1.4vw,18px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 9px; z-index: 9998; }
+.nav-dots button { width: 9px; height: 9px; border-radius: 50%; background: rgba(127,127,127,.30); border: none; padding: 0; cursor: pointer; transition: background .3s, transform .3s; }
+.nav-dots button.on { background: var(--dk-accent); transform: scale(1.35); }
+.nav-dots button.light { background: rgba(244,242,237,.3); }
+.nav-dots button.light.on { background: var(--dk-accent-bright); }
+
+/* ============================================================
+   PRESENTATION CURSOR
+   A soft circle that auto-contrasts against any background via
+   mix-blend-mode: difference (light on dark, dark on light), grows
+   over interactive targets. Pointer devices only. Off while editing.
+============================================================ */
+.deck-cursor {
+    position: fixed; top: 0; left: 0; width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(255,255,255,0.6); mix-blend-mode: difference;
+    pointer-events: none; z-index: 2147483000;
+    transition: width .18s var(--dk-ease), height .18s var(--dk-ease), background .18s var(--dk-ease), opacity .2s ease;
+}
+.deck-cursor.hot { width: 48px; height: 48px; background: rgba(255,255,255,0.88); }
+.deck-cursor.hidden { opacity: 0; }
+body.deck-cursor-on, body.deck-cursor-on * { cursor: none !important; }
+@media (hover: none), (pointer: coarse) {
+    .deck-cursor { display: none !important; }
+    body.deck-cursor-on, body.deck-cursor-on * { cursor: auto !important; }
+}
+
+/* ============================================================
+   AUTHOR + PRESENTER CHROME
+   Controls live top-center and only appear when the mouse is near
+   the top edge. All chrome is hidden in print.
+============================================================ */
+.ea-controls {
+    position: fixed; top: 12px; left: 50%; display: flex; gap: 6px;
+    z-index: 2147483600; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    opacity: 0; pointer-events: none; transform: translate(-50%, -10px);
+    transition: opacity .25s ease, transform .25s cubic-bezier(.2,.8,.2,1);
+}
+.ea-controls.near-top { opacity: 0.9; pointer-events: auto; transform: translate(-50%, 0); }
+.ea-controls.near-top:hover { opacity: 1; }
+.ea-controls button { appearance: none; background: rgba(18,20,22,.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.16); color: #f4f2ed; padding: 6px 11px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .15s; }
+.ea-controls button:hover { background: rgba(18,20,22,.97); }
+.ea-controls button.on { background: var(--dk-accent-2); border-color: var(--dk-accent-2); color: #14140e; }
+.ea-controls button.ea-mini { padding: 6px 9px; opacity: .7; }
+
+body.ea-editing [contenteditable]:hover { outline: 1px dashed color-mix(in srgb, var(--dk-accent) 45%, transparent); outline-offset: 3px; }
+body.ea-editing [contenteditable]:focus { outline: 1.5px dashed color-mix(in srgb, var(--dk-accent-2) 85%, transparent); outline-offset: 3px; }
+body.ea-annotating .slide [data-ea-id]:hover { outline: 1px solid color-mix(in srgb, var(--dk-accent-2) 55%, transparent); outline-offset: 2px; cursor: crosshair; }
+body.ea-annotating .slide { cursor: crosshair; user-select: none; }
+
+/* free-form region annotations: a box drawn anywhere, with a note pinned to it */
+.ea-region { position: absolute; box-sizing: border-box; z-index: 45; display: none; cursor: pointer; border: 1.5px solid var(--dk-accent-2); border-radius: 6px; background: color-mix(in srgb, var(--dk-accent-2) 10%, transparent); }
+body.ea-annotating .ea-region, body.ea-editing .ea-region { display: block; }
+.ea-region > .ea-marker { display: block; }
+.ea-region-draw { position: fixed; box-sizing: border-box; z-index: 2147483600; pointer-events: none; border: 1.5px dashed var(--dk-accent-2); border-radius: 6px; background: color-mix(in srgb, var(--dk-accent-2) 12%, transparent); }
+
+.ea-marker { display: none; position: absolute; top: -11px; right: -11px; z-index: 50; width: 22px; height: 22px; border-radius: 50%; background: var(--dk-accent-2); color: #14140e; font-size: 12px; line-height: 22px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+body.ea-editing .ea-marker, body.ea-annotating .ea-marker { display: block; }
+
+.ea-popover { position: fixed; z-index: 2147483650; width: 300px; background: #16302d; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; padding: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+.ea-popover textarea { width: 100%; min-height: 90px; resize: vertical; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 7px; color: #f4f2ed; font: inherit; font-size: 14px; padding: 9px; line-height: 1.45; }
+.ea-pop-row { display: flex; justify-content: space-between; }
+.ea-pop-row button { appearance: none; border: 0; border-radius: 7px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.ea-pop-del { background: transparent; color: rgba(244,242,237,.55); }
+.ea-pop-save { background: var(--dk-accent); color: #fff; }
+
+.ea-notes-panel { position: fixed; right: 16px; bottom: 16px; width: 460px; max-width: calc(100vw - 32px); max-height: 44vh; background: #0c1c1c; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,.55); z-index: 2147483620; display: none; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+.ea-notes-panel.open { display: flex; }
+.ea-np-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.ea-np-label { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--dk-accent-bright); font-weight: 600; }
+.ea-np-hint { font-size: 11px; color: rgba(244,242,237,.4); margin-left: 8px; text-transform: none; letter-spacing: 0; }
+.ea-np-close { appearance: none; background: transparent; border: 0; color: rgba(244,242,237,.55); font-size: 20px; cursor: pointer; }
+.ea-np-body { padding: 16px; overflow-y: auto; font-size: 17px; line-height: 1.55; color: #f4f2ed; outline: none; }
+.ea-np-body strong { color: var(--dk-accent-2); }
+.ea-notes-panel.editing .ea-np-body { background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--dk-accent-2) 60%, transparent); border-radius: 8px; }
+
+.ea-toast { position: fixed; bottom: 18px; left: 50%; transform: translate(-50%, 12px); background: #16302d; color: #f4f2ed; border: 1px solid rgba(255,255,255,.14); padding: 8px 16px; border-radius: 999px; font-size: 13px; z-index: 2147483640; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+.ea-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---- print: one slide per page, animations resolved, chrome gone ---- */
+@page { size: 1280px 720px; margin: 0; }
+@media print {
+    html, body { scroll-snap-type: none; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .slide { width: 1280px; height: 720px; page-break-after: always; break-after: page; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+    [data-gate] .gate-item { opacity: 1 !important; transform: none !important; }
+    .reveal-gate { display: none !important; }
+    .deck-progress, .nav-dots, .ea-controls, .ea-notes-panel, .ea-popover, .ea-toast, .ea-marker, .ea-region, .ea-region-draw, .deck-cursor, .theme-switch { display: none !important; }
+    /* No edit-mode affordances in print: contenteditable focus rings, the
+       hover/focus dashed outlines (lines 104-106), nothing draws a box. */
+    [contenteditable], body.ea-editing [contenteditable]:hover, body.ea-editing [contenteditable]:focus,
+    body.ea-annotating .slide [data-ea-id]:hover, [data-ea-id], :focus, :focus-visible { outline: none !important; box-shadow: none !important; }
+}
+
+  </style>
+  <!-- all three themes loaded so the switcher (bottom-left) can flip live -->
+  <style>
+/* ============================================================
+   THEME · COMPOUND — deep-teal authority, gold CTAs (Compound Systems brand)
+   Set <html data-theme="compound">. Load after deck-kit.css.
+============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+[data-theme="compound"] {
+    --bg: #0C1C1C; --bg-sec: #0F2424; --surface: #122E2E;
+    --text: #F4F2ED; --text-soft: #9DB3B0; --hair: rgba(90,224,200,.16);
+    --accent: #5AE0C8; --pill-bg: rgba(90,224,200,.12);
+    --cta-bg: #E8CB5A; --cta-text: #0C1C1C;
+    --font-display: 'Archivo Black', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    /* engine chrome */
+    --dk-accent: #1F6B63; --dk-accent-2: #E8CB5A; --dk-accent-bright: #5AE0C8;
+}
+
+[data-theme="compound"] .slide { background: var(--bg); color: var(--text); font-family: var(--font-body); }
+[data-theme="compound"] .slide.sec { background: linear-gradient(135deg, #0F2424, #0C1C1C 60%); }
+
+[data-theme="compound"] .top { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.5rem,4vh,2.5rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="compound"] .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(2rem,6vw,5.5rem); width: 100%; max-width: 1180px; box-sizing: border-box; }
+[data-theme="compound"] .bot { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.1rem,3vh,1.9rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="compound"] .brand, [data-theme="compound"] .meta, [data-theme="compound"] .pg, [data-theme="compound"] .brand-mark { font-family: var(--font-mono); font-size: clamp(.68rem,.95vw,.85rem); letter-spacing: .06em; color: var(--text-soft); text-transform: uppercase; }
+
+[data-theme="compound"] .overline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .18em; font-size: clamp(.68rem,1vw,.9rem); color: var(--accent); margin: 0 0 clamp(.7rem,1.6vh,1.1rem); }
+[data-theme="compound"] .display { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.6rem,7vw,5.6rem); line-height: .98; letter-spacing: -.02em; margin: 0; }
+[data-theme="compound"] .section { font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem,5vw,3.8rem); line-height: 1.02; letter-spacing: -.02em; margin: 0; }
+[data-theme="compound"] .lead { font-size: clamp(1.05rem,1.7vw,1.55rem); line-height: 1.5; color: var(--text-soft); max-width: 42ch; margin: clamp(1rem,2.4vh,1.6rem) 0 0; }
+[data-theme="compound"] p { font-size: clamp(1rem,1.3vw,1.28rem); line-height: 1.6; margin: .6rem 0 0; }
+[data-theme="compound"] .rule { width: 48px; height: 2px; background: var(--cta-bg); margin: clamp(1rem,2.5vh,1.6rem) 0; }
+
+[data-theme="compound"] .stat-number { font-family: var(--font-display); font-weight: 400; font-size: clamp(3.4rem,11vw,9rem); line-height: .88; letter-spacing: -.03em; color: var(--accent); font-variant-numeric: tabular-nums; }
+[data-theme="compound"] .stat-label { font-size: clamp(1rem,1.5vw,1.4rem); font-weight: 600; margin-top: .6rem; }
+[data-theme="compound"] .stat-sub { color: var(--text-soft); font-family: var(--font-mono); font-size: clamp(.78rem,1.1vw,1rem); margin-top: .4rem; }
+
+[data-theme="compound"] .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: clamp(1rem,2vw,1.6rem); margin-top: clamp(1.4rem,3vh,2.2rem); }
+[data-theme="compound"] .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: clamp(1.1rem,2vw,1.7rem); }
+[data-theme="compound"] .card-t { font-weight: 600; font-size: clamp(1.05rem,1.4vw,1.4rem); }
+[data-theme="compound"] .card-d { color: var(--text-soft); font-size: clamp(.9rem,1.1vw,1.1rem); margin-top: .4rem; line-height: 1.5; }
+
+[data-theme="compound"] .pill { display: inline-flex; align-items: center; gap: .4em; background: var(--pill-bg); color: var(--accent); border: 1px solid var(--hair); border-radius: 999px; padding: .35em .9em; font-size: clamp(.76rem,1vw,.95rem); font-family: var(--font-mono); }
+[data-theme="compound"] .kbd { font-family: var(--font-mono); background: var(--surface); border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 7px; padding: .12em .5em; font-size: .92em; color: var(--accent); }
+[data-theme="compound"] .cta { display: inline-flex; align-items: center; gap: .5em; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font-body); font-weight: 600; padding: clamp(.7rem,1.5vh,1rem) clamp(1.3rem,2.5vw,1.9rem); border-radius: 10px; text-decoration: none; font-size: clamp(1rem,1.3vw,1.2rem); }
+
+  </style>
+  <style>
+/* ============================================================
+   THEME · CLAUDE — warm cream paper, clay accent, editorial serif
+   (the look used for the Claude Design workshops)
+   Set <html data-theme="claude">. Load after deck-kit.css.
+============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Spline+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+[data-theme="claude"] {
+    --bg: #F5F1EB; --bg-sec: #ECE5D9; --surface: #FBF8F2;
+    --text: #1B1A17; --text-soft: #6B6357; --hair: rgba(27,26,23,.13);
+    --accent: #C15F3C; --pill-bg: rgba(193,95,60,.10);
+    --cta-bg: #C15F3C; --cta-text: #FBF8F2;
+    --font-display: 'Newsreader', Georgia, serif;
+    --font-body: 'Spline Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    /* engine chrome (light deck → dark default dots, clay accents) */
+    --dk-accent: #C15F3C; --dk-accent-2: #C15F3C; --dk-accent-bright: #C15F3C;
+}
+
+[data-theme="claude"] .slide { background: var(--bg); color: var(--text); font-family: var(--font-body); }
+[data-theme="claude"] .slide.sec { background: var(--bg-sec); }
+
+[data-theme="claude"] .top { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.5rem,4vh,2.5rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="claude"] .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(2rem,6vw,5.5rem); width: 100%; max-width: 1180px; box-sizing: border-box; }
+[data-theme="claude"] .bot { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.1rem,3vh,1.9rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="claude"] .brand, [data-theme="claude"] .meta, [data-theme="claude"] .pg, [data-theme="claude"] .brand-mark { font-family: var(--font-mono); font-size: clamp(.68rem,.95vw,.85rem); letter-spacing: .05em; color: var(--text-soft); text-transform: uppercase; }
+
+[data-theme="claude"] .overline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .17em; font-size: clamp(.68rem,1vw,.9rem); color: var(--accent); margin: 0 0 clamp(.7rem,1.6vh,1.1rem); }
+[data-theme="claude"] .display { font-family: var(--font-display); font-weight: 500; font-size: clamp(2.8rem,7.4vw,6rem); line-height: 1.02; letter-spacing: -.018em; margin: 0; }
+[data-theme="claude"] .section { font-family: var(--font-display); font-weight: 500; font-size: clamp(2.1rem,5.2vw,4rem); line-height: 1.05; letter-spacing: -.015em; margin: 0; }
+[data-theme="claude"] .lead { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.15rem,1.9vw,1.7rem); line-height: 1.5; color: var(--text-soft); max-width: 44ch; margin: clamp(1rem,2.4vh,1.6rem) 0 0; }
+[data-theme="claude"] p { font-size: clamp(1rem,1.3vw,1.28rem); line-height: 1.62; margin: .6rem 0 0; }
+[data-theme="claude"] .rule { width: 48px; height: 2px; background: var(--accent); margin: clamp(1rem,2.5vh,1.6rem) 0; }
+
+[data-theme="claude"] .stat-number { font-family: var(--font-display); font-weight: 500; font-size: clamp(3.6rem,11.5vw,9.5rem); line-height: .9; letter-spacing: -.02em; color: var(--accent); font-variant-numeric: tabular-nums; }
+[data-theme="claude"] .stat-label { font-size: clamp(1rem,1.5vw,1.4rem); font-weight: 600; margin-top: .6rem; }
+[data-theme="claude"] .stat-sub { color: var(--text-soft); font-family: var(--font-mono); font-size: clamp(.78rem,1.1vw,1rem); margin-top: .4rem; }
+
+[data-theme="claude"] .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: clamp(1rem,2vw,1.6rem); margin-top: clamp(1.4rem,3vh,2.2rem); }
+[data-theme="claude"] .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: clamp(1.1rem,2vw,1.7rem); box-shadow: 0 1px 2px rgba(27,26,23,.04); }
+[data-theme="claude"] .card-t { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.1rem,1.45vw,1.45rem); }
+[data-theme="claude"] .card-d { color: var(--text-soft); font-size: clamp(.9rem,1.1vw,1.1rem); margin-top: .4rem; line-height: 1.5; }
+
+[data-theme="claude"] .pill { display: inline-flex; align-items: center; gap: .4em; background: var(--pill-bg); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 999px; padding: .35em .9em; font-size: clamp(.76rem,1vw,.95rem); font-family: var(--font-mono); }
+[data-theme="claude"] .kbd { font-family: var(--font-mono); background: var(--surface); border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 7px; padding: .12em .5em; font-size: .92em; color: var(--text); }
+[data-theme="claude"] .cta { display: inline-flex; align-items: center; gap: .5em; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font-body); font-weight: 600; padding: clamp(.7rem,1.5vh,1rem) clamp(1.3rem,2.5vw,1.9rem); border-radius: 10px; text-decoration: none; font-size: clamp(1rem,1.3vw,1.2rem); }
+
+  </style>
+  <style>
+/* ============================================================
+   THEME · NEON — cyber cyan/magenta on deep navy, grid + glow
+   Set <html data-theme="neon">. Load after deck-kit.css.
+============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap');
+
+[data-theme="neon"] {
+    --bg: #0a0f1c; --bg-sec: #0b1226; --surface: rgba(0,255,204,.045);
+    --text: #E6F0FF; --text-soft: #8AA0C8; --hair: rgba(0,255,204,.20);
+    --accent: #00FFCC; --accent-2: #FF00AA; --pill-bg: rgba(0,255,204,.10);
+    --cta-bg: #00FFCC; --cta-text: #04121A;
+    --font-display: 'Clash Display', system-ui, sans-serif;
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --glow: 0 0 18px rgba(0,255,204,.45);
+    /* engine chrome */
+    --dk-accent: #00FFCC; --dk-accent-2: #FF00AA; --dk-accent-bright: #00FFCC;
+}
+
+[data-theme="neon"] .slide {
+    color: var(--text); font-family: var(--font-body);
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(120% 80% at 80% -10%, rgba(255,0,170,.14), transparent 55%),
+        radial-gradient(110% 80% at 0% 110%, rgba(0,255,204,.12), transparent 55%),
+        linear-gradient(rgba(0,255,204,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,204,.05) 1px, transparent 1px);
+    background-size: auto, auto, 46px 46px, 46px 46px;
+}
+[data-theme="neon"] .slide.sec { background-color: var(--bg-sec); }
+
+[data-theme="neon"] .top { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.5rem,4vh,2.5rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="neon"] .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(2rem,6vw,5.5rem); width: 100%; max-width: 1180px; box-sizing: border-box; }
+[data-theme="neon"] .bot { display: flex; justify-content: space-between; align-items: center; padding: clamp(1.1rem,3vh,1.9rem) clamp(2rem,5vw,4.5rem); }
+[data-theme="neon"] .brand, [data-theme="neon"] .meta, [data-theme="neon"] .pg, [data-theme="neon"] .brand-mark { font-family: var(--font-mono); font-size: clamp(.68rem,.95vw,.85rem); letter-spacing: .08em; color: var(--text-soft); text-transform: uppercase; }
+
+[data-theme="neon"] .overline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .2em; font-size: clamp(.68rem,1vw,.9rem); color: var(--accent); text-shadow: var(--glow); margin: 0 0 clamp(.7rem,1.6vh,1.1rem); }
+[data-theme="neon"] .display { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.7rem,7.2vw,5.8rem); line-height: 1; letter-spacing: -.01em; margin: 0;
+    background: linear-gradient(100deg, #00FFCC, #6CE9FF 35%, #FF00AA); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 24px rgba(0,255,204,.25)); }
+[data-theme="neon"] .section { font-family: var(--font-display); font-weight: 600; font-size: clamp(2.1rem,5.2vw,4rem); line-height: 1.03; letter-spacing: -.01em; margin: 0; color: var(--text); }
+[data-theme="neon"] .lead { font-size: clamp(1.05rem,1.7vw,1.55rem); line-height: 1.5; color: var(--text-soft); max-width: 42ch; margin: clamp(1rem,2.4vh,1.6rem) 0 0; }
+[data-theme="neon"] p { font-size: clamp(1rem,1.3vw,1.28rem); line-height: 1.6; margin: .6rem 0 0; }
+[data-theme="neon"] .rule { width: 60px; height: 2px; background: var(--accent); box-shadow: var(--glow); margin: clamp(1rem,2.5vh,1.6rem) 0; }
+
+[data-theme="neon"] .stat-number { font-family: var(--font-display); font-weight: 700; font-size: clamp(3.4rem,11vw,9rem); line-height: .88; letter-spacing: -.02em; color: var(--accent); text-shadow: 0 0 30px rgba(0,255,204,.5); font-variant-numeric: tabular-nums; }
+[data-theme="neon"] .stat-label { font-size: clamp(1rem,1.5vw,1.4rem); font-weight: 600; margin-top: .6rem; }
+[data-theme="neon"] .stat-sub { color: var(--text-soft); font-family: var(--font-mono); font-size: clamp(.78rem,1.1vw,1rem); margin-top: .4rem; }
+
+[data-theme="neon"] .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: clamp(1rem,2vw,1.6rem); margin-top: clamp(1.4rem,3vh,2.2rem); }
+[data-theme="neon"] .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: clamp(1.1rem,2vw,1.7rem); box-shadow: inset 0 0 0 1px rgba(0,255,204,.04), 0 0 24px rgba(0,255,204,.06); }
+[data-theme="neon"] .card-t { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.1rem,1.45vw,1.45rem); color: var(--text); }
+[data-theme="neon"] .card-d { color: var(--text-soft); font-size: clamp(.9rem,1.1vw,1.1rem); margin-top: .4rem; line-height: 1.5; }
+
+[data-theme="neon"] .pill { display: inline-flex; align-items: center; gap: .4em; background: var(--pill-bg); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 999px; padding: .35em .9em; font-size: clamp(.76rem,1vw,.95rem); font-family: var(--font-mono); box-shadow: 0 0 14px rgba(0,255,204,.15); }
+[data-theme="neon"] .kbd { font-family: var(--font-mono); background: rgba(0,255,204,.08); border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 7px; padding: .12em .5em; font-size: .92em; color: var(--accent); }
+[data-theme="neon"] .cta { display: inline-flex; align-items: center; gap: .5em; background: var(--cta-bg); color: var(--cta-text); font-family: var(--font-body); font-weight: 700; padding: clamp(.7rem,1.5vh,1rem) clamp(1.3rem,2.5vw,1.9rem); border-radius: 10px; text-decoration: none; font-size: clamp(1rem,1.3vw,1.2rem); box-shadow: 0 0 26px rgba(0,255,204,.4); }
+
+  </style>
+
+  <style>
+    /* live theme switcher, for the demo only (hidden in print) */
+    .theme-switch {
+      position: fixed; left: 16px; bottom: 16px; z-index: 2147483600;
+      font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px;
+      background: var(--surface, rgba(127,127,127,.12)); color: var(--accent, #5AE0C8);
+      border: 1px solid var(--hair, rgba(127,127,127,.25)); border-radius: 999px;
+      padding: 8px 15px; cursor: pointer; backdrop-filter: blur(8px);
+      transition: transform .15s var(--dk-ease);
+    }
+    .theme-switch:hover { transform: translateY(-2px); }
+    .feature-keys { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: clamp(1rem,2.5vh,1.6rem); }
+  </style>
+
+
+</head>
+<body>
+
+  <!-- 1 · TITLE -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">usecompound.ai</span></div>
+    <div class="body">
+      <p class="overline reveal d1">A free Claude Code skill</p>
+      <h1 class="display reveal d2">Compound<br>Deck Kit.</h1>
+      <p class="lead reveal d3">Build decks that present, edit, and export themselves. One HTML file. Zero dependencies. Three looks.</p>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">01</span></div>
+  </section>
+
+  <!-- 2 · HOOK -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Why</span></div>
+    <div class="body">
+      <p class="overline reveal d1">The idea</p>
+      <h2 class="section reveal d2">Describe the deck.<br>Claude builds it.</h2>
+      <p class="lead reveal d3">You talk through your slides. The skill turns them into a full-page, animated deck you can edit live and present from your browser.</p>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">02</span></div>
+  </section>
+
+  <!-- 3 · SECTION DIVIDER -->
+  <section class="slide sec">
+    <div class="body">
+      <p class="overline reveal d1">What's inside</p>
+      <h2 class="section reveal d2">Six things every<br>deck does for free.</h2>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">03</span></div>
+  </section>
+
+  <!-- 4 · MOTION -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Motion</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Feature 01</p>
+      <h2 class="section reveal d2">Full-page &amp; alive.</h2>
+      <p class="lead reveal d3">Scroll-snap slides, a progress bar, nav dots, and ease-out-expo reveals.</p>
+      <div class="card-grid">
+        <div class="card reveal d4"><div class="card-t">Scroll-snap</div><div class="card-d">Each slide locks to the viewport, arrows, space, swipe.</div></div>
+        <div class="card reveal d5"><div class="card-t">Staggered reveals</div><div class="card-d">Everything you just watched fly in is one class: <span class="kbd">.reveal .d2</span></div></div>
+        <div class="card reveal d6"><div class="card-t">Responsive</div><div class="card-d">clamp() sizing, looks right on a phone and a projector.</div></div>
+      </div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">04</span></div>
+  </section>
+
+  <!-- 5 · COUNT-UP -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Numbers</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Feature 02</p>
+      <div class="stat-number reveal d2" data-count="100" data-suffix="%">100%</div>
+      <p class="stat-label reveal d3">self-contained, numbers count up when the slide arrives.</p>
+      <p class="stat-sub reveal d4">just write &lt;span data-count="100" data-suffix="%"&gt;</p>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">05</span></div>
+  </section>
+
+  <!-- 6 · LIVE EDIT -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Edit</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Feature 03</p>
+      <h2 class="section reveal d2">Edit it live.</h2>
+      <p class="lead reveal d3">Press <span class="kbd">E</span>, click any text, and type. Your edits save to the browser and survive a reload, no rebuild.</p>
+      <div class="feature-keys reveal d4">
+        <span class="pill">E · edit text + notes</span>
+        <span class="pill">⟲ · reset to original</span>
+      </div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">06</span></div>
+  </section>
+
+  <!-- 7 · MARK -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Mark</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Feature 04</p>
+      <h2 class="section reveal d2">Mark anything up.</h2>
+      <p class="lead reveal d3">Press <span class="kbd">M</span>, then pin a note to any element, or drag a box anywhere to annotate an exact spot. Perfect for review notes to yourself or a client.</p>
+      <div class="feature-keys reveal d4"><span class="pill">M · pin a note</span><span class="pill">drag · box a region</span></div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">07</span></div>
+  </section>
+
+  <!-- 8 · NOTES + PRESENTER -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Present</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Feature 05</p>
+      <h2 class="section reveal d2">Present like a pro.</h2>
+      <p class="lead reveal d3">Press <span class="kbd">N</span> for editable speaker notes, or <span class="kbd">P</span> for a separate presenter window, current note, next slide, and a timer. Share only the deck window.</p>
+      <div class="feature-keys reveal d4"><span class="pill">N · speaker notes</span><span class="pill">P · presenter view</span></div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">08</span></div>
+  </section>
+
+  <!-- 9 · TAP TO REVEAL (interactive) -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Interactive</span></div>
+    <div class="body" data-gate>
+      <p class="overline reveal d1">Feature 06</p>
+      <h2 class="section reveal d2">Tap to reveal.</h2>
+      <p class="lead reveal d3">Hold a beat in a live pitch: show the problem, then reveal the answer on click. Try it →</p>
+      <p class="reveal d4" style="margin-top:1.2rem;"><button class="cta reveal-gate" type="button">Reveal the punchline →</button></p>
+      <div class="gate-item card" style="margin-top:1.2rem; max-width:620px;">
+        <div class="card-t">There it is.</div>
+        <div class="card-d">Hidden until you click (Enter works too). It resolves automatically in PDF export, so nothing stays hidden on the page.</div>
+      </div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">09</span></div>
+  </section>
+
+  <!-- 10 · EXPORT -->
+  <section class="slide sec">
+    <div class="body">
+      <p class="overline reveal d1">Ship it</p>
+      <h2 class="section reveal d2">Export to HTML or PDF.</h2>
+      <p class="lead reveal d3">One self-contained file you can email, host, or hand to a client. Your edits and notes bake right in.</p>
+      <div class="feature-keys reveal d4"><span class="pill">↓ HTML · edited copy</span><span class="pill">↓ PDF · one slide / page</span></div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">10</span></div>
+  </section>
+
+  <!-- 11 · THEMES -->
+  <section class="slide">
+    <div class="top"><span class="brand">Compound Systems</span><span class="meta">Looks</span></div>
+    <div class="body">
+      <p class="overline reveal d1">One deck, three looks</p>
+      <h2 class="section reveal d2">Switch the whole<br>theme in one word.</h2>
+      <p class="lead reveal d3">Hit the <strong>Theme</strong> button (bottom-left) to flip this deck between all three, live.</p>
+      <div class="card-grid">
+        <div class="card reveal d4"><div class="card-t">Compound</div><div class="card-d">Deep-teal authority, gold CTAs.</div></div>
+        <div class="card reveal d5"><div class="card-t">Claude</div><div class="card-d">Warm cream paper, clay accent, editorial serif.</div></div>
+        <div class="card reveal d6"><div class="card-t">Neon</div><div class="card-d">Cyber cyan + magenta on navy, grid &amp; glow.</div></div>
+      </div>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">11</span></div>
+  </section>
+
+  <!-- 12 · CTA CLOSE -->
+  <section class="slide sec">
+    <div class="body">
+      <p class="overline reveal d1">Get the skill</p>
+      <h2 class="section reveal d2">Want it?<br>Comment "DECK".</h2>
+      <p class="lead reveal d3">I'll send you the Compound Deck Kit, free. Drop it into Claude Code and start building.</p>
+      <p class="reveal d4" style="margin-top:1.4rem;"><a class="cta" href="https://usecompound.ai" target="_blank" rel="noopener">usecompound.ai →</a></p>
+    </div>
+    <div class="bot"><span class="brand-mark">Compound Deck Kit</span><span class="pg">12</span></div>
+  </section>
+
+  <button class="theme-switch" id="themeSwitch">◑ Theme: Compound</button>
+
+  <script type="application/json" id="speaker-notes">
+  [
+    {"title": "Title", "note": "This is <strong>Compound Deck Kit</strong>, a free skill I built for Claude Code. Let me show you what it does."},
+    {"title": "Why", "note": "The idea is simple: you describe your slides, Claude builds the whole thing. <strong>No design tools, no PowerPoint.</strong>"},
+    {"title": "What's inside", "note": "Six things every deck gets automatically. Walk through them quickly."},
+    {"title": "Motion", "note": "First, it's full-page and animated. Scroll-snap, a progress bar, and these <strong>reveal</strong> animations, all for free."},
+    {"title": "Numbers", "note": "Second, numbers count up the moment the slide lands. One attribute. Watch the 100% climb."},
+    {"title": "Edit", "note": "Third, and this is the magic: press <strong>E</strong>, click any text, type. It just changed live. No rebuild."},
+    {"title": "Mark", "note": "Fourth, press <strong>M</strong> and you can pin a note anywhere or drag a box to mark a spot. Great for review."},
+    {"title": "Present", "note": "Fifth, <strong>N</strong> opens speaker notes you can edit on the fly, <strong>P</strong> opens a presenter window with a timer."},
+    {"title": "Interactive", "note": "Sixth, tap to reveal. Click the button and the answer appears. Builds suspense in a live pitch."},
+    {"title": "Export", "note": "When you're done, export a self-contained HTML or a PDF. Your edits bake right in."},
+    {"title": "Themes", "note": "And it ships with three looks. Hit the theme button, watch the <strong>whole deck</strong> change. Same slides, new skin."},
+    {"title": "Close", "note": "If you want it, comment <strong>DECK</strong> and I'll send it over. It's free."}
+  ]
+  </script>
+
+  <script>
+    (function () {
+      var themes = [["compound", "Compound"], ["claude", "Claude"], ["neon", "Neon"]];
+      var i = 0, btn = document.getElementById("themeSwitch");
+      if (!btn) return; // showcase-only control; absent in exported decks
+      btn.addEventListener("click", function () {
+        i = (i + 1) % themes.length;
+        document.documentElement.dataset.theme = themes[i][0];
+        btn.textContent = "◑ Theme: " + themes[i][1];
+      });
+    })();
+  </script>
+<script>
+/* ============================================================
+   COMPOUND DECK KIT — engine JS (full-page deck + author/presenter layer)
+   Pair with deck-kit.css. Include once, after your slides:
+       <script defer src="assets/deck-kit.js"><\/script>
+
+   Gives any deck of <section class="slide"> elements:
+     • scroll-snap nav (arrows / space / PgUp-Dn / Home-End), nav dots, progress bar
+     • IntersectionObserver reveal (.reveal -> .visible) + staggered .d1..d8
+     • count-up numbers: <span data-count="16500" data-prefix="$"> (opt data-decimals, data-suffix)
+     • tap-to-reveal gate: wrap content in [data-gate] with a .reveal-gate button (Enter also fires)
+     • presentation cursor: auto-contrast circle, grows over interactive targets (pointer devices)
+     • Edit mode (E): contenteditable text, persisted to localStorage, survives reload
+     • Mark mode (M): pin a note to any element, or drag a box anywhere to annotate a region
+     • Speaker notes from <script id="speaker-notes"> JSON [{title,note},…] aligned to slide order:
+         - inline panel (N) — EDITABLE while Edit mode is on
+         - presenter window (P): current note, next-slide preview, timer; share only the deck window
+     • Export edited HTML (notes + text baked in), Export PDF (print -> Save as PDF)
+   Controls live top-center and only appear when the mouse is near the top edge.
+
+   Customize the editable set with:  window.DECK_KIT_EDIT_SEL = "h1,h2,.my-class";
+   Persisted keys are namespaced per deck (meta[name=deck-id] content, else pathname).
+   To force-clear stale browser edits after baking, bump <meta name="deck-id"> value.
+   by Compound Systems · usecompound.ai
+============================================================ */
+(() => {
+  "use strict";
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  if (!slides.length) return;
+
+  const DECK_ID = (document.querySelector('meta[name="deck-id"]') || {}).content || location.pathname;
+  const CHANNEL_NAME = "deckkit:" + DECK_ID;
+  const LS_EDITS = "deckkit.edits:" + DECK_ID;
+  const LS_ANNOT = "deckkit.annot:" + DECK_ID;
+  const LS_REGIONS = "deckkit.regions:" + DECK_ID;
+  const LS_NOTES = "deckkit.notes:" + DECK_ID;
+
+  const DEFAULT_EDIT_SEL = "h1,h2,h3,h4,h5,h6,p,li,blockquote,.overline,.lead,.title-lead," +
+    ".stat-number,.stat-label,.stat-sub,.real-tag,.real-hours,.real-unit,.real-foot," +
+    ".phase-title,.phase-desc,.coach-t,.coach-d,.price-line,.glabel,.fn-t,.fn-n,.chip,.pill,.card-t,.card-d," +
+    ".meta,.pg,.eq,.out-line,.price-item .k,.price-item .v,[data-edit]";
+  const EDIT_SEL = window.DECK_KIT_EDIT_SEL || DEFAULT_EDIT_SEL;
+
+  let NOTES = [];
+  const notesTag = document.getElementById("speaker-notes");
+  if (notesTag) { try { NOTES = JSON.parse(notesTag.textContent || "[]"); } catch (e) {} }
+
+  const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "{}"); } catch (e) { return {}; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const isDark = (el) => {
+    const m = getComputedStyle(el).backgroundColor.match(/\d+/g);
+    if (!m) return false;
+    return (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) < 128;
+  };
+
+  // speaker-note overrides (editable notes): { "<slideIndex>": "<html>" }
+  let NOTE_OVERRIDES = lsGet(LS_NOTES);
+  const noteFor = (i) => {
+    const base = NOTES[i] || { title: "", note: "" };
+    const ov = NOTE_OVERRIDES[i];
+    return (typeof ov === "string") ? { title: base.title, note: ov } : base;
+  };
+
+  // theme-driven presenter accents
+  const cs = getComputedStyle(document.documentElement);
+  const ACC = (cs.getPropertyValue("--dk-accent") || "#1f6b63").trim() || "#1f6b63";
+  const ACC2 = (cs.getPropertyValue("--dk-accent-2") || "#c9ae3c").trim() || "#c9ae3c";
+
+  /* ---- inject chrome that isn't already present ---- */
+  let progress = document.querySelector(".deck-progress");
+  if (!progress) { progress = document.createElement("div"); progress.className = "deck-progress"; document.body.appendChild(progress); }
+  let dotsNav = document.querySelector(".nav-dots");
+  if (!dotsNav) { dotsNav = document.createElement("nav"); dotsNav.className = "nav-dots"; document.body.appendChild(dotsNav); }
+
+  /* ---- count-up ---- */
+  function countUp(el) {
+    if (el.dataset.counted) return; el.dataset.counted = "1";
+    const target = parseFloat(el.dataset.count), dec = parseInt(el.dataset.decimals || "0", 10);
+    const pre = el.dataset.prefix || "", suf = el.dataset.suffix || "";
+    const fmt = (n) => pre + n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suf;
+    const dur = 1100, t0 = performance.now(), ease = (t) => 1 - Math.pow(1 - t, 3);
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = fmt(target * ease(p));
+      if (p < 1) requestAnimationFrame(step); else el.textContent = fmt(target);
+    })(performance.now());
+  }
+
+  /* ---- reveal + active tracking ---- */
+  let curIndex = 0;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+        e.target.classList.add("visible");
+        e.target.querySelectorAll("[data-count]").forEach(countUp);
+        curIndex = slides.indexOf(e.target); onSlideChange();
+      }
+    });
+  }, { threshold: [0.55] });
+  slides.forEach((s) => io.observe(s));
+
+  function onSlideChange() {
+    const dark = isDark(slides[curIndex]);
+    dotsNav.querySelectorAll("button").forEach((b, i) => {
+      b.classList.toggle("on", i === curIndex);
+      b.classList.toggle("light", dark);
+    });
+    progress.style.width = ((curIndex + 1) / slides.length * 100) + "%";
+    if (notesOpen) renderNotesPanel(curIndex);
+    pushState(curIndex);
+  }
+  function goTo(i) {
+    const n = Math.max(0, Math.min(i, slides.length - 1));
+    slides[n].scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  slides.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.setAttribute("aria-label", "Go to slide " + (i + 1));
+    b.addEventListener("click", () => goTo(i));
+    dotsNav.appendChild(b);
+  });
+
+  window.addEventListener("keydown", (e) => {
+    const inEditable = e.target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+    if (inEditable) { if (e.key === "Escape") e.target.blur(); return; }
+    if (e.key === "Enter") {
+      const box = slides[curIndex] && slides[curIndex].querySelector("[data-gate]:not(.revealed)");
+      if (box) { e.preventDefault(); box.classList.add("revealed"); return; }
+    }
+    if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); goTo(curIndex + 1); }
+    else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); goTo(curIndex - 1); }
+    else if (e.key === "Home") { e.preventDefault(); goTo(0); }
+    else if (e.key === "End") { e.preventDefault(); goTo(slides.length - 1); }
+    else if (e.key === "e" || e.key === "E") setEditing(!editing);
+    else if (e.key === "m" || e.key === "M") setAnnotating(!annotating);
+    else if (e.key === "n" || e.key === "N") toggleNotes();
+    else if (e.key === "p" || e.key === "P") openPresenter();
+    else if (e.key === "Escape") { closePopover(); if (editing) setEditing(false); if (annotating) setAnnotating(false); }
+  });
+
+  /* ---- tap-to-reveal gates ---- */
+  function initGates() {
+    document.querySelectorAll(".reveal-gate").forEach((g) => {
+      g.addEventListener("click", (e) => { e.preventDefault(); const box = g.closest("[data-gate]"); if (box) box.classList.add("revealed"); });
+    });
+  }
+
+  /* ---- presentation cursor ---- */
+  let deckCursor = null, cursorX = 0, cursorY = 0, cursorRaf = null;
+  function initCursor() {
+    if (!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    deckCursor = document.createElement("div");
+    deckCursor.className = "deck-cursor hidden";
+    document.body.appendChild(deckCursor);
+    document.body.classList.add("deck-cursor-on");
+    window.addEventListener("mousemove", (e) => {
+      cursorX = e.clientX; cursorY = e.clientY;
+      deckCursor.classList.remove("hidden");
+      if (!cursorRaf) cursorRaf = requestAnimationFrame(() => {
+        cursorRaf = null;
+        deckCursor.style.transform = "translate(" + cursorX + "px," + cursorY + "px) translate(-50%,-50%)";
+      });
+      const hot = e.target.closest && e.target.closest("a,button,.nav-dots button,.reveal-gate,[data-act],[contenteditable='true']");
+      deckCursor.classList.toggle("hot", !!hot);
+    }, { passive: true });
+    document.addEventListener("mouseleave", () => deckCursor && deckCursor.classList.add("hidden"));
+  }
+  function updateCursorMode() {
+    if (!deckCursor) return;
+    const native = editing || annotating;   // hand the caret back while editing/annotating
+    document.body.classList.toggle("deck-cursor-on", !native);
+    deckCursor.classList.toggle("hidden", native);
+  }
+
+  /* ===================== AUTHOR LAYER ===================== */
+  function assignIds() {
+    slides.forEach((slide, si) => {
+      let n = 0;
+      slide.querySelectorAll(EDIT_SEL).forEach((el) => { if (!el.dataset.eaId) el.dataset.eaId = "s" + si + "-e" + n; n++; });
+    });
+  }
+
+  let editing = false, saveTimer = null;
+  function rehydrateEdits() {
+    const saved = lsGet(LS_EDITS);
+    slides.forEach((slide) => slide.querySelectorAll("[data-ea-id]").forEach((el) => {
+      const v = saved[el.dataset.eaId]; if (typeof v === "string") el.innerHTML = v;
+    }));
+  }
+  function persistEdits() {
+    const saved = lsGet(LS_EDITS);
+    slides.forEach((slide) => slide.querySelectorAll("[data-ea-id]").forEach((el) => { saved[el.dataset.eaId] = el.innerHTML; }));
+    lsSet(LS_EDITS, saved); flash("Edits saved");
+  }
+  function setEditing(on) {
+    editing = on; document.body.classList.toggle("ea-editing", on);
+    slides.forEach((slide) => slide.querySelectorAll("[data-ea-id]").forEach((el) => {
+      if (on) { el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false"); }
+      else el.removeAttribute("contenteditable");
+    }));
+    if (!on) persistEdits();
+    if (notesOpen) renderNotesPanel(curIndex);   // toggle note editability
+    syncButtons(); updateCursorMode();
+  }
+  document.addEventListener("input", (e) => {
+    if (editing && e.target.closest("[data-ea-id]")) { clearTimeout(saveTimer); saveTimer = setTimeout(persistEdits, 400); }
+  });
+  function resetEdits() {
+    if (!confirm("Clear all saved text edits, notes and marks, then reload the original?")) return;
+    try { [LS_EDITS, LS_ANNOT, LS_REGIONS, LS_NOTES].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    location.reload();
+  }
+
+  /* ---- annotations ---- */
+  let annotating = false;
+  function setAnnotating(on) { annotating = on; document.body.classList.toggle("ea-annotating", on); syncButtons(); updateCursorMode(); }
+  function annId(el) {
+    if (el.dataset.eaAid) return el.dataset.eaAid;
+    let aid; do { aid = "a" + Math.random().toString(36).slice(2, 7); } while (document.querySelector('[data-ea-aid="' + aid + '"]'));
+    el.dataset.eaAid = aid; return aid;
+  }
+  function addMarker(el, text) {
+    el.querySelectorAll(":scope > .ea-marker").forEach((m) => m.remove());
+    if (getComputedStyle(el).position === "static") el.style.position = "relative";
+    const m = document.createElement("span");
+    m.className = "ea-marker"; m.textContent = "✎"; m.title = text;
+    m.addEventListener("click", (ev) => { ev.stopPropagation(); openPopover(el, text); });
+    el.appendChild(m);
+  }
+  function rehydrateAnnotations() {
+    const saved = lsGet(LS_ANNOT);
+    Object.entries(saved).forEach(([aid, rec]) => {
+      const el = rec.editId ? document.querySelector('[data-ea-id="' + rec.editId + '"]') : null;
+      if (el) { el.dataset.eaAid = aid; addMarker(el, rec.text); }
+    });
+  }
+  function saveAnnotation(el, text) {
+    const aid = annId(el), saved = lsGet(LS_ANNOT);
+    if (text.trim()) { saved[aid] = { editId: el.dataset.eaId || null, text }; addMarker(el, text); }
+    else { delete saved[aid]; el.querySelectorAll(":scope > .ea-marker").forEach((m) => m.remove()); }
+    lsSet(LS_ANNOT, saved);
+  }
+  let popoverEl = null, pendingRegion = null;
+  function _openPopover(rect, existing, onSave, onDelete) {
+    closePopover();
+    const pop = document.createElement("div"); pop.className = "ea-popover";
+    pop.innerHTML = '<textarea placeholder="Note to self…">' + (existing || "") + '</textarea><div class="ea-pop-row"><button class="ea-pop-del">Delete</button><button class="ea-pop-save">Save</button></div>';
+    document.body.appendChild(pop);
+    pop.style.left = Math.min(rect.left, window.innerWidth - 320) + "px";
+    pop.style.top = Math.min(rect.bottom + 8, window.innerHeight - 170) + "px";
+    const ta = pop.querySelector("textarea"); ta.focus();
+    pop.querySelector(".ea-pop-save").onclick = () => { onSave(ta.value); pendingRegion = null; closePopover(); };
+    pop.querySelector(".ea-pop-del").onclick = () => { onDelete(); pendingRegion = null; closePopover(); };
+    popoverEl = pop;
+  }
+  function openPopover(el, existing) {
+    _openPopover(el.getBoundingClientRect(), existing, (v) => saveAnnotation(el, v), () => saveAnnotation(el, ""));
+  }
+  function closePopover() {
+    if (popoverEl) { popoverEl.remove(); popoverEl = null; }
+    if (pendingRegion) {
+      const { slide, rid } = pendingRegion; pendingRegion = null;
+      if (!lsGet(LS_REGIONS)[rid]) { const b = slide.querySelector('[data-ea-rid="' + rid + '"]'); if (b) b.remove(); }
+    }
+  }
+
+  /* ---- free-form region annotations: drag a box anywhere, pin a note to it ---- */
+  function regId() { let id; do { id = "r" + Math.random().toString(36).slice(2, 7); } while (document.querySelector('[data-ea-rid="' + id + '"]')); return id; }
+  function addRegion(slide, rid, rec) {
+    if (getComputedStyle(slide).position === "static") slide.style.position = "relative";
+    let box = slide.querySelector('[data-ea-rid="' + rid + '"]');
+    if (!box) {
+      box = document.createElement("div"); box.className = "ea-region"; box.dataset.eaRid = rid;
+      const m = document.createElement("span"); m.className = "ea-marker"; m.textContent = "✎"; box.appendChild(m);
+      box.addEventListener("click", (ev) => { ev.stopPropagation(); ev.preventDefault(); openRegionPopover(slide, rid); });
+      slide.appendChild(box);
+    }
+    box.style.left = rec.x + "%"; box.style.top = rec.y + "%"; box.style.width = rec.w + "%"; box.style.height = rec.h + "%";
+    box.querySelector(".ea-marker").title = rec.text || "";
+  }
+  function saveRegion(slide, rid, rec, text) {
+    const saved = lsGet(LS_REGIONS);
+    if (text.trim()) { rec.text = text; saved[rid] = rec; addRegion(slide, rid, rec); }
+    else { delete saved[rid]; const b = slide.querySelector('[data-ea-rid="' + rid + '"]'); if (b) b.remove(); }
+    lsSet(LS_REGIONS, saved);
+  }
+  function openRegionPopover(slide, rid) {
+    const rec = lsGet(LS_REGIONS)[rid]; if (!rec) return;
+    const box = slide.querySelector('[data-ea-rid="' + rid + '"]');
+    _openPopover(box.getBoundingClientRect(), rec.text || "", (v) => saveRegion(slide, rid, rec, v), () => saveRegion(slide, rid, rec, ""));
+  }
+  function rehydrateRegions() {
+    Object.entries(lsGet(LS_REGIONS)).forEach(([rid, rec]) => { const s = slides[rec.slide]; if (s) addRegion(s, rid, rec); });
+  }
+  let drawStart = null, rubber = null, didDraw = false, suppressNextClick = false;
+  document.addEventListener("mousedown", (e) => {
+    if (!annotating || e.button !== 0) return;
+    if (e.target.closest(".ea-controls, .ea-popover, .ea-marker, .ea-region")) return;
+    const slide = e.target.closest(".slide"); if (!slide) return;
+    drawStart = { slide, x: e.clientX, y: e.clientY }; didDraw = false;
+  }, true);
+  document.addEventListener("mousemove", (e) => {
+    if (!drawStart) return;
+    const dx = e.clientX - drawStart.x, dy = e.clientY - drawStart.y;
+    if (!didDraw && Math.abs(dx) + Math.abs(dy) < 6) return;
+    didDraw = true;
+    if (!rubber) { rubber = document.createElement("div"); rubber.className = "ea-region-draw"; document.body.appendChild(rubber); }
+    rubber.style.left = Math.min(e.clientX, drawStart.x) + "px"; rubber.style.top = Math.min(e.clientY, drawStart.y) + "px";
+    rubber.style.width = Math.abs(dx) + "px"; rubber.style.height = Math.abs(dy) + "px";
+  }, true);
+  document.addEventListener("mouseup", (e) => {
+    if (!drawStart) return;
+    const start = drawStart; drawStart = null;
+    if (rubber) { rubber.remove(); rubber = null; }
+    if (!didDraw) return;
+    e.preventDefault(); e.stopPropagation(); suppressNextClick = true;
+    const slide = start.slide, sr = slide.getBoundingClientRect();
+    const x1 = Math.min(e.clientX, start.x), y1 = Math.min(e.clientY, start.y);
+    const x2 = Math.max(e.clientX, start.x), y2 = Math.max(e.clientY, start.y);
+    const rec = { slide: slides.indexOf(slide), x: (x1 - sr.left) / sr.width * 100, y: (y1 - sr.top) / sr.height * 100,
+      w: (x2 - x1) / sr.width * 100, h: (y2 - y1) / sr.height * 100, text: "" };
+    const rid = regId(); addRegion(slide, rid, rec); pendingRegion = { slide, rid };
+    _openPopover(slide.querySelector('[data-ea-rid="' + rid + '"]').getBoundingClientRect(), "",
+      (v) => saveRegion(slide, rid, rec, v), () => saveRegion(slide, rid, rec, ""));
+  }, true);
+  document.addEventListener("click", (e) => {
+    if (suppressNextClick) { suppressNextClick = false; e.preventDefault(); e.stopPropagation(); return; }
+    if (annotating) {
+      const slide = e.target.closest(".slide");
+      if (slide && !e.target.closest(".ea-marker") && !e.target.closest(".ea-region") && !e.target.closest(".ea-controls")) {
+        const el = e.target.closest("[data-ea-id]");
+        if (el) { e.preventDefault(); e.stopPropagation(); const saved = lsGet(LS_ANNOT); openPopover(el, saved[el.dataset.eaAid] ? saved[el.dataset.eaAid].text : ""); return; }
+      }
+    }
+    if (popoverEl && !e.target.closest(".ea-popover") && !e.target.closest(".ea-marker") && !e.target.closest(".ea-region")) closePopover();
+  }, true);
+
+  /* ---- speaker notes: inline panel (editable in Edit mode) ---- */
+  let notesPanel = null, notesOpen = false, noteSaveT = null;
+  function buildNotesPanel() {
+    const p = document.createElement("div"); p.className = "ea-notes-panel";
+    p.innerHTML = '<div class="ea-np-head"><span class="ea-np-label"></span><button class="ea-np-close" aria-label="Close notes">×</button></div><div class="ea-np-body"></div>';
+    p.querySelector(".ea-np-close").onclick = () => toggleNotes(false);
+    const body = p.querySelector(".ea-np-body");
+    body.addEventListener("input", () => {
+      if (!editing) return;
+      NOTE_OVERRIDES[curIndex] = body.innerHTML;
+      lsSet(LS_NOTES, NOTE_OVERRIDES);
+      clearTimeout(noteSaveT); noteSaveT = setTimeout(() => { pushState(curIndex); flash("Note saved"); }, 350);
+    });
+    document.body.appendChild(p); notesPanel = p;
+  }
+  function renderNotesPanel(i) {
+    if (!notesPanel) return; const n = noteFor(i);
+    notesPanel.querySelector(".ea-np-label").innerHTML = "Slide " + (i + 1) + " · " + (n.title || "")
+      + (editing ? '<span class="ea-np-hint">editable</span>' : '');
+    const body = notesPanel.querySelector(".ea-np-body");
+    body.innerHTML = n.note || (editing ? "" : "<em style='opacity:.5'>No note.</em>");
+    body.setAttribute("contenteditable", editing ? "true" : "false");
+    body.setAttribute("spellcheck", "false");
+    notesPanel.classList.toggle("editing", editing);
+  }
+  function toggleNotes(force) {
+    notesOpen = typeof force === "boolean" ? force : !notesOpen;
+    if (notesOpen && !notesPanel) buildNotesPanel();
+    if (notesPanel) notesPanel.classList.toggle("open", notesOpen);
+    if (notesOpen) renderNotesPanel(curIndex); syncButtons();
+  }
+
+  /* ---- speaker notes: presenter window ---- */
+  const bc = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
+  function presenterState(i) {
+    const cur = noteFor(i), nxt = noteFor(i + 1);
+    return { type: "state", index: i, total: slides.length, label: cur.title || "", note: cur.note || "",
+      nextLabel: i + 1 < slides.length ? (nxt.title || "") : "— end —", nextNote: i + 1 < slides.length ? (nxt.note || "") : "" };
+  }
+  function pushState(i) { if (bc) bc.postMessage(presenterState(i)); }
+  if (bc) bc.onmessage = (e) => { const d = e.data || {}; if (d.type === "hello") pushState(curIndex); else if (d.type === "nav") goTo(curIndex + d.dir); else if (d.type === "goto") goTo(d.index); };
+  function openPresenter() {
+    const w = window.open("", "deckkit-presenter", "width=760,height=820");
+    if (!w) { flash("Allow pop-ups to open presenter view"); return; }
+    w.document.write(PRESENTER_HTML); w.document.close();
+    setTimeout(() => pushState(curIndex), 200);
+  }
+  const PRESENTER_HTML = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Presenter</title>'
+    + '<style>:root{--acc:' + ACC + ';--acc2:' + ACC2 + '}*{box-sizing:border-box;margin:0}body{background:#0c1c1c;color:#f4f2ed;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:26px 30px;height:100vh;display:flex;flex-direction:column;gap:18px}.bar{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:14px}.timer{font-variant-numeric:tabular-nums;font-size:34px;font-weight:700}.pos{font-family:ui-monospace,Menlo,monospace;font-size:15px;color:rgba(244,242,237,.6)}.tbtns button,.nav button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#f4f2ed;border-radius:7px;padding:7px 13px;font-size:13px;cursor:pointer;margin-left:6px}.label{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--acc);font-weight:700}.cur-title{font-size:25px;font-weight:600;margin-top:4px}.note{flex:1;overflow-y:auto;font-size:24px;line-height:1.55;padding:6px 2px}.note strong{color:var(--acc2)}.note em{color:rgba(244,242,237,.4)}.next{border-top:1px solid rgba(255,255,255,.12);padding-top:14px}.next .label{color:var(--acc2)}.next-title{font-size:18px;color:rgba(244,242,237,.85);margin-top:3px}.next-note{font-size:14px;color:rgba(244,242,237,.5);margin-top:5px;line-height:1.45;max-height:3em;overflow:hidden}.nav{display:flex;justify-content:space-between}</style></head><body>'
+    + '<div class="bar"><div class="timer" id="timer">00:00</div><div class="tbtns"><button id="tStart">Start</button><button id="tReset">Reset</button></div><div class="pos" id="pos">— / —</div></div>'
+    + '<div><div class="label">Current slide</div><div class="cur-title" id="curTitle"></div></div><div class="note" id="note"></div>'
+    + '<div class="next"><div class="label">Up next</div><div class="next-title" id="nextTitle"></div><div class="next-note" id="nextNote"></div></div>'
+    + '<div class="nav"><button id="prev">← Prev</button><button id="next">Next →</button></div>'
+    + '<scr' + 'ipt>var bc=new BroadcastChannel(' + JSON.stringify(CHANNEL_NAME) + ');bc.postMessage({type:"hello"});'
+    + 'bc.onmessage=function(e){var d=e.data||{};if(d.type!=="state")return;document.getElementById("pos").textContent=(d.index+1)+" / "+d.total;document.getElementById("curTitle").textContent=d.label||"";document.getElementById("note").innerHTML=d.note||"<em>No note.</em>";document.getElementById("nextTitle").textContent=d.nextLabel||"";document.getElementById("nextNote").innerHTML=d.nextNote||"";};'
+    + 'document.getElementById("prev").onclick=function(){bc.postMessage({type:"nav",dir:-1});};document.getElementById("next").onclick=function(){bc.postMessage({type:"nav",dir:1});};'
+    + 'document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown")bc.postMessage({type:"nav",dir:1});if(e.key==="ArrowLeft"||e.key==="PageUp")bc.postMessage({type:"nav",dir:-1});});'
+    + 'var t0=null,acc=0,iv=null;function fmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");}function tick(){var s=Math.floor((acc+(t0?Date.now()-t0:0))/1000);document.getElementById("timer").textContent=fmt(s);}'
+    + 'document.getElementById("tStart").onclick=function(){if(t0){acc+=Date.now()-t0;t0=null;clearInterval(iv);this.textContent="Start";}else{t0=Date.now();iv=setInterval(tick,250);this.textContent="Pause";}};'
+    + 'document.getElementById("tReset").onclick=function(){t0=null;acc=0;clearInterval(iv);document.getElementById("tStart").textContent="Start";tick();};'
+    + '</scr' + 'ipt></body></html>';
+
+  /* ---- export ---- */
+  // Read a stylesheet's CSS as text — fetch the href (works over http), fall
+  // back to walking cssRules (works when same-origin rules are accessible).
+  async function cssTextFor(sheet) {
+    if (sheet.href) {
+      try { const r = await fetch(sheet.href); if (r.ok) return await r.text(); } catch (e) {}
+    }
+    try { return Array.from(sheet.cssRules).map((r) => r.cssText).join("\n"); } catch (e) { return ""; }
+  }
+  async function exportHTML() {
+    if (editing) persistEdits();
+    flash("Bundling…");
+    const clones = slides.map((s) => {
+      const c = s.cloneNode(true);
+      c.querySelectorAll("[data-ea-id]").forEach((el) => { el.removeAttribute("contenteditable"); el.removeAttribute("spellcheck"); el.removeAttribute("data-ea-id"); el.removeAttribute("data-ea-aid"); });
+      c.querySelectorAll(".ea-marker, .ea-region").forEach((m) => m.remove());
+      c.classList.remove("visible");
+      return c.outerHTML;
+    }).join("\n");
+    // bake current notes (incl. edited overrides) back into the JSON tag
+    const bakedNotes = NOTES.length
+      ? '<script type="application/json" id="speaker-notes">' + JSON.stringify(slides.map((s, i) => { const n = noteFor(i); return { title: n.title || "", note: n.note || "" }; })) + '<\/script>'
+      : "";
+    // Inline every stylesheet (engine + theme) so the saved file is self-contained.
+    // Relative <link href> would break once the file moves to ~/Downloads.
+    const sheetTexts = await Promise.all(Array.from(document.styleSheets).map(cssTextFor));
+    const bakedStyles = sheetTexts.filter(Boolean).map((t) => "<style>\n" + t + "\n</style>").join("\n");
+    const inlineStyles = Array.from(document.querySelectorAll('head style')).map((s) => s.outerHTML).join("\n");
+    const metas = Array.from(document.querySelectorAll('head meta')).map((m) => m.outerHTML).join("\n");
+    // Inline the engine JS so nav/reveals/edit/notes work from the saved file.
+    // External <script src> (modular decks): fetch the source (works over http).
+    const extTexts = await Promise.all(Array.from(document.querySelectorAll('script[src]')).map(async (s) => {
+      try { const r = await fetch(s.src); if (r.ok) return await r.text(); } catch (e) {} return "";
+    }));
+    // Inline <script> blocks (self-contained decks): re-emit verbatim, but skip
+    // the speaker-notes JSON (re-emitted above as bakedNotes) to avoid duplicates.
+    const inlineScripts = Array.from(document.querySelectorAll('script:not([src])'))
+      .filter((s) => (s.type || "").toLowerCase() !== "application/json" && s.id !== "speaker-notes")
+      .map((s) => s.textContent).filter(Boolean);
+    const bakedScripts = extTexts.filter(Boolean).concat(inlineScripts).map((t) => "<script>\n" + t + "\n<\/script>").join("\n");
+    const titleTag = '<title>' + (document.title || "deck") + '</title>';
+    const htmlAttrs = document.documentElement.getAttribute("data-theme") ? ' data-theme="' + document.documentElement.getAttribute("data-theme") + '"' : "";
+    const html = "<!DOCTYPE html><html lang=\"en\"" + htmlAttrs + "><head>\n" + metas + "\n" + titleTag + "\n" + bakedStyles + "\n" + inlineStyles + "\n</head><body>\n" + clones + "\n" + bakedNotes + "\n" + bakedScripts + "\n</body></html>";
+    const blob = new Blob([html], { type: "text/html" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = (document.title || "deck") + " — edited.html"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000); flash("HTML exported (self-contained)");
+  }
+  function exportPDF() {
+    flash("Print dialog → choose 'Save as PDF'");
+    // Leave edit/annotate modes so contenteditable focus boxes + dashed
+    // outlines never bleed into the printed page.
+    if (editing) setEditing(false);
+    if (annotating) setAnnotating(false);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    slides.forEach((s) => s.classList.add("visible"));
+    document.querySelectorAll("[data-gate]").forEach((g) => g.classList.add("revealed"));
+    setTimeout(() => window.print(), 350);
+  }
+
+  /* ---- controls + hover-reveal ---- */
+  let controls = null;
+  function buildControls() {
+    const c = document.createElement("div"); c.className = "ea-controls";
+    c.innerHTML = '<button data-act="edit" title="Edit text + notes (E)">✎ Edit</button>'
+      + '<button data-act="annotate" title="Mark / draw a note (M)">⚑ Mark</button>'
+      + '<button data-act="notes" title="Speaker notes (N)">▤ Notes</button>'
+      + '<button data-act="present" title="Presenter window (P)">⧉ Present</button>'
+      + '<button data-act="exporthtml" title="Export edited HTML">↓ HTML</button>'
+      + '<button data-act="exportpdf" title="Export PDF">↓ PDF</button>'
+      + '<button data-act="reset" class="ea-mini" title="Clear saved edits / notes / marks">⟲</button>';
+    c.addEventListener("click", (e) => {
+      const a = e.target.closest("button"); if (!a) return;
+      ({ edit: () => setEditing(!editing), annotate: () => setAnnotating(!annotating), notes: () => toggleNotes(),
+         present: openPresenter, exporthtml: exportHTML, exportpdf: exportPDF, reset: resetEdits }[a.dataset.act] || (() => {}))();
+    });
+    document.body.appendChild(c); controls = c;
+  }
+  function syncButtons() {
+    if (!controls) return;
+    controls.querySelector('[data-act="edit"]').classList.toggle("on", editing);
+    controls.querySelector('[data-act="annotate"]').classList.toggle("on", annotating);
+    controls.querySelector('[data-act="notes"]').classList.toggle("on", notesOpen);
+  }
+  window.addEventListener("mousemove", (e) => {
+    if (!controls) return;
+    if (e.clientY < 90) controls.classList.add("near-top");
+    else if (e.clientY > 170 && !controls.matches(":hover")) controls.classList.remove("near-top");
+  }, { passive: true });
+
+  let toast = null, toastT = null;
+  function flash(msg) {
+    if (!toast) { toast = document.createElement("div"); toast.className = "ea-toast"; document.body.appendChild(toast); }
+    toast.textContent = msg; toast.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => toast.classList.remove("show"), 1500);
+  }
+
+  /* ---- init ---- */
+  assignIds();
+  rehydrateEdits();
+  rehydrateAnnotations();
+  rehydrateRegions();
+  buildControls();
+  initGates();
+  initCursor();
+  slides[0].classList.add("visible");
+  slides[0].querySelectorAll("[data-count]").forEach(countUp);
+  onSlideChange();
+
+  // expose a tiny hook for theme switchers / external buttons
+  window.DeckKit = { goTo: goTo, present: openPresenter, edit: () => setEditing(!editing) };
+})();
+
+</script>
+</body>
+</html>

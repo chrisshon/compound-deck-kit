@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="compound">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- bump this value to force-clear saved browser edits after you bake them in -->
+  <meta name="deck-id" content="my-deck-v1">
+  <title>My Deck</title>
+
+  <link rel="stylesheet" href="assets/deck-kit.css">
+  <!-- pick ONE theme (compound · claude · neon) and match <html data-theme="…"> above -->
+  <link rel="stylesheet" href="themes/compound.css">
+  <!-- <link rel="stylesheet" href="themes/claude.css"> -->
+  <!-- <link rel="stylesheet" href="themes/neon.css"> -->
+
+  <script defer src="assets/deck-kit.js"></script>
+</head>
+<body>
+
+  <!-- 1 · TITLE -->
+  <section class="slide">
+    <div class="top"><span class="brand">Your Brand</span><span class="meta">Deck · 2026</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Overline label</p>
+      <h1 class="display reveal d2">Your headline<br>goes right here.</h1>
+      <p class="lead reveal d3">One sentence that frames the whole deck and earns the next 30 seconds.</p>
+    </div>
+    <div class="bot"><span class="brand-mark">Your Brand</span><span class="pg">01</span></div>
+  </section>
+
+  <!-- 2 · ONE BIG STAT (count-up: animates the first time the slide scrolls into view) -->
+  <section class="slide">
+    <div class="top"><span class="brand">Your Brand</span><span class="meta">The number</span></div>
+    <div class="body">
+      <p class="overline reveal d1">A single stat</p>
+      <div class="stat-number reveal d2" data-count="16500" data-prefix="$" data-suffix="+">$16,500+</div>
+      <p class="stat-label reveal d3">What the number means in one line.</p>
+      <p class="stat-sub reveal d4">supporting basis · context · source</p>
+    </div>
+    <div class="bot"><span class="brand-mark">Your Brand</span><span class="pg">02</span></div>
+  </section>
+
+  <!-- 3 · SECTION DIVIDER -->
+  <section class="slide sec">
+    <div class="body">
+      <p class="overline reveal d1">Part One</p>
+      <h2 class="section reveal d2">A section title<br>that sets up what's next.</h2>
+    </div>
+    <div class="bot"><span class="brand-mark">Your Brand</span><span class="pg">03</span></div>
+  </section>
+
+  <!-- 4 · CARDS -->
+  <section class="slide">
+    <div class="top"><span class="brand">Your Brand</span><span class="meta">The approach</span></div>
+    <div class="body">
+      <p class="overline reveal d1">Three parts</p>
+      <h2 class="section reveal d2">How it works.</h2>
+      <div class="card-grid">
+        <div class="card reveal d3"><div class="card-t">First</div><div class="card-d">A short description of this piece.</div></div>
+        <div class="card reveal d4"><div class="card-t">Second</div><div class="card-d">A short description of this piece.</div></div>
+        <div class="card reveal d5"><div class="card-t">Third</div><div class="card-d">A short description of this piece.</div></div>
+      </div>
+    </div>
+    <div class="bot"><span class="brand-mark">Your Brand</span><span class="pg">04</span></div>
+  </section>
+
+  <!-- 5 · CLOSE / CTA -->
+  <section class="slide sec">
+    <div class="body">
+      <p class="overline reveal d1">Next step</p>
+      <h2 class="section reveal d2">Let's talk.</h2>
+      <p class="lead reveal d3">A clear, single call to action.</p>
+      <p class="reveal d4" style="margin-top:1.4rem;"><a class="cta" href="#">Book a call →</a></p>
+    </div>
+    <div class="bot"><span class="brand-mark">Your Brand</span><span class="pg">05</span></div>
+  </section>
+
+  <!-- Speaker notes, MUST stay 1:1 with the slides above (one entry per slide, in order).
+       Use <strong> for emphasis. Notes are editable live in Edit mode (press E). -->
+  <script type="application/json" id="speaker-notes">
+  [
+    {"title": "Title", "note": "Open with the headline. Say the one-sentence frame, then move."},
+    {"title": "The number", "note": "Let the number land. <strong>Tie it to their world</strong> before moving on."},
+    {"title": "Part One", "note": "Signpost the section so they know where you're taking them."},
+    {"title": "How it works", "note": "Walk the three cards left to right. Keep each to a sentence."},
+    {"title": "Close", "note": "Make the ask explicit. Then stop talking and let them respond."}
+  ]
+  </script>
+</body>
+</html>
