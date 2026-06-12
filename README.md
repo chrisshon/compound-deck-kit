@@ -4,7 +4,18 @@
 
 A free [Claude Code](https://claude.com/claude-code) skill from [Compound Systems](https://usecompound.ai). Describe your slides, and Claude builds a full-page, animated HTML deck you can edit live in the browser, mark up, present from, and export. One folder, zero dependencies, three looks.
 
-![themes: compound · claude · neon](examples/showcase.html)
+![Compound Deck Kit — Compound theme title slide](screenshots/theme-compound.png)
+
+## One deck, three looks
+
+| | |
+|---|---|
+| ![Compound theme](screenshots/theme-compound.png) | ![Claude theme](screenshots/theme-claude.png) |
+| **Compound** — deep-teal authority, gold CTAs | **Claude** — warm cream paper, editorial serif |
+| ![Neon theme](screenshots/theme-neon.png) | ![Count-up numbers, neon theme](screenshots/feature-countup.png) |
+| **Neon** — cyber cyan + magenta on navy, grid & glow | Count-up stats animate as each slide arrives |
+
+![Mark anything up — annotate any element or drag a box](screenshots/feature-markup.png)
 
 ## What every deck gets, for free
 
